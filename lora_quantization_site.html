@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRA & Quantization | Deep Learning Concepts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .hero-content {
+            z-index: 1;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        .section {
+            padding: 100px 0;
+            position: relative;
+        }
+
+        .section:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .section-title {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 2px;
+        }
+
+        .concept-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+            transform: translateY(50px);
+            opacity: 0;
+        }
+
+        .concept-card.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .concept-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .concept-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .concept-icon {
+            font-size: 3rem;
+            margin-right: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .concept-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .formula-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .parameter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .parameter-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .parameter-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .parameter-name {
+            font-weight: 600;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #4ecdc4;
+        }
+
+        .comparison-table {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .table-row:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .interactive-demo {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .demo-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 1rem;
+        }
+
+        .demo-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .visual-demo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            margin: 2rem 0;
+        }
+
+        .matrix-visual {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 10px;
+            margin: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            animation: matrixPulse 2s infinite;
+        }
+
+        @keyframes matrixPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .plus-sign {
+            font-size: 3rem;
+            color: #4ecdc4;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 0;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .concept-card {
+                padding: 2rem;
+            }
+            
+            .table-header, .table-row {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-content">
+            <h1>LoRA & Quantization</h1>
+            <p>Master the art of efficient deep learning</p>
+        </div>
+        <div class="scroll-indicator">
+            <div style="font-size: 2rem;">↓</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2 class="section-title">Low-Rank Adaptation (LoRA)</h2>
+            
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">🔧</div>
+                    <div class="concept-title">Freeze & Inject Strategy</div>
+                </div>
+                <p>Keep your pretrained weights <strong>W</strong> intact while adding two small matrices:</p>
+                <div class="formula-box">
+                    A ∈ ℝ<sup>d×r</sup> & B ∈ ℝ<sup>r×k</sup><br>
+                    where r ≪ d, k
+                </div>
+                
+                <div class="visual-demo">
+                    <div class="matrix-visual">W</div>
+                    <div class="plus-sign">+</div>
+                    <div class="matrix-visual">A</div>
+                    <div class="matrix-visual">B</div>
+                </div>
+            </div>
+
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">📐</div>
+                    <div class="concept-title">Update Rule</div>
+                </div>
+                <div class="formula-box">
+                    W' = W + (α/r) · A · B
+                </div>
+                <p>This elegant formula shows how LoRA updates work: the original weights plus a scaled low-rank update.</p>
+            </div>
+
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">⚙️</div>
+                    <div class="concept-title">Key Hyperparameters</div>
+                </div>
+                <div class="parameter-grid">
+                    <div class="parameter-item">
+                        <div class="parameter-name">Rank (r)</div>
+                        <p>Controls capacity vs. parameter count trade-off</p>
+                    </div>
+                    <div class="parameter-item">
+                        <div class="parameter-name">Scale (α)</div>
+                        <p>Determines update strength</p>
+                    </div>
+                    <div class="parameter-item">
+                        <div class="parameter-name">Dropout (p)</div>
+                        <p>Regularizes on limited data</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <h2 class="section-title">Quantization Theory</h2>
+            
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">🔋</div>
+                    <div class="concept-title">Why Quantize?</div>
+                </div>
+                <p>Dramatically reduce memory usage and computation by using lower-bit formats:</p>
+                <div class="parameter-grid">
+                    <div class="parameter-item">
+                        <div class="parameter-name">FP16</div>
+                        <p>Half precision floating point</p>
+                    </div>
+                    <div class="parameter-item">
+                        <div class="parameter-name">INT8</div>
+                        <p>8-bit integer quantization</p>
+                    </div>
+                    <div class="parameter-item">
+                        <div class="parameter-name">INT4</div>
+                        <p>Extreme 4-bit quantization</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">📊</div>
+                    <div class="concept-title">Uniform Mapping</div>
+                </div>
+                <div class="formula-box">
+                    q = clip(round(x/S) + Z)<br>
+                    x̂ = (q - Z) · S
+                </div>
+                <p>This mapping converts floating-point values to quantized integers and back.</p>
+            </div>
+
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">🎯</div>
+                    <div class="concept-title">Quantization Approaches</div>
+                </div>
+                <div class="parameter-grid">
+                    <div class="parameter-item">
+                        <div class="parameter-name">Post-Training Quantization (PTQ)</div>
+                        <p>Fast approach with no retraining required</p>
+                    </div>
+                    <div class="parameter-item">
+                        <div class="parameter-name">Quantization-Aware Training (QAT)</div>
+                        <p>Simulates quantization during training for minimal accuracy loss</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="concept-card">
+                <div class="concept-header">
+                    <div class="concept-icon">⚖️</div>
+                    <div class="concept-title">Performance Trade-offs</div>
+                </div>
+                <div class="comparison-table">
+                    <div class="table-header">
+                        <div>Format</div>
+                        <div>Bytes/Param</div>
+                        <div>Speed ↑</div>
+                        <div>Accuracy Δ</div>
+                    </div>
+                    <div class="table-row">
+                        <div><strong>FP16</strong></div>
+                        <div>2</div>
+                        <div>~1.5×</div>
+                        <div>Negligible</div>
+                    </div>
+                    <div class="table-row">
+                        <div><strong>INT8</strong></div>
+                        <div>1</div>
+                        <div>~2×</div>
+                        <div>Small w/ QAT</div>
+                    </div>
+                    <div class="table-row">
+                        <div><strong>INT4</strong></div>
+                        <div>0.5</div>
+                        <div>~3×</div>
+                        <div>Moderate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="interactive-demo">
+        <div class="container">
+            <h3 style="font-size: 2rem; margin-bottom: 2rem;">Interactive Demonstration</h3>
+            <button class="demo-button" onclick="animateLoRA()">Animate LoRA Process</button>
+            <button class="demo-button" onclick="animateQuantization()">Show Quantization</button>
+            <div id="demo-area" style="height: 200px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                Click a button to see the magic happen!
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p>&copy; 2025 Deep Learning Concepts. Built with modern web technologies.</p>
+        </div>
+    </div>
+
+    <script>
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all concept cards
+        document.querySelectorAll('.concept-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Interactive demonstrations
+        function animateLoRA() {
+            const demoArea = document.getElementById('demo-area');
+            demoArea.innerHTML = `
+                <div style="display: flex; align-items: center; animation: fadeIn 0.5s ease-in;">
+                    <div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); width: 80px; height: 80px; border-radius: 10px; margin: 0 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; animation: slideInLeft 1s ease-out;">W</div>
+                    <div style="font-size: 2rem; color: #4ecdc4; animation: pulse 1s infinite;">+</div>
+                    <div style="background: linear-gradient(45deg, #764ba2, #667eea); width: 60px; height: 60px; border-radius: 10px; margin: 0 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; animation: slideInUp 1s ease-out 0.5s both;">A</div>
+                    <div style="font-size: 2rem; color: #4ecdc4;">×</div>
+                    <div style="background: linear-gradient(45deg, #764ba2, #667eea); width: 60px; height: 60px; border-radius: 10px; margin: 0 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; animation: slideInUp 1s ease-out 1s both;">B</div>
+                    <div style="font-size: 2rem; color: #4ecdc4;">=</div>
+                    <div style="background: linear-gradient(45deg, #45b7d1, #96c93d); width: 80px; height: 80px; border-radius: 10px; margin: 0 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; animation: slideInRight 1s ease-out 1.5s both;">W'</div>
+                </div>
+            `;
+        }
+
+        function animateQuantization() {
+            const demoArea = document.getElementById('demo-area');
+            demoArea.innerHTML = `
+                <div style="display: flex; align-items: center; animation: fadeIn 0.5s ease-in;">
+                    <div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); padding: 20px; border-radius: 15px; margin: 0 15px; animation: slideInLeft 1s ease-out;">
+                        <div style="font-weight: bold; margin-bottom: 10px;">FP32</div>
+                        <div style="font-size: 0.9rem;">32.7561...</div>
+                    </div>
+                    <div style="font-size: 3rem; color: #4ecdc4; animation: rotate 2s linear infinite;">→</div>
+                    <div style="background: linear-gradient(45deg, #764ba2, #667eea); padding: 20px; border-radius: 15px; margin: 0 15px; animation: slideInRight 1s ease-out 0.5s both;">
+                        <div style="font-weight: bold; margin-bottom: 10px;">INT8</div>
+                        <div style="font-size: 0.9rem;">127</div>
+                    </div>
+                    <div style="margin-left: 20px; animation: fadeIn 1s ease-out 1s both;">
+                        <div style="color: #4ecdc4; font-weight: bold;">75% Memory Saved!</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add custom CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes slideInLeft {
+                from { transform: translateX(-100px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideInRight {
+                from { transform: translateX(100px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideInUp {
+                from { transform: translateY(50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
